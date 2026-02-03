@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class EsgConfig(AppConfig):
-    name = 'esg'
+    name = 'App.esg'
