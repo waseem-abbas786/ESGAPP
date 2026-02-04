@@ -60,20 +60,3 @@ class DocumentViewSet(viewsets.ModelViewSet):
         document.delete()
         return Response({"detail": "Document deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
 
-
-class DocumentViewSet(viewsets.ModelViewSet):
-    queryset = Document.objects.all()
-    
-    def get_serializer_class(self):
-        if self.action == "list":
-            return DocumentListSerializer
-        elif self.action == "retrieve":
-            return DocumentDetailSerializer
-        elif self.action == "create":
-            return DocumentCreateSerializer
-        return DocumentListSerializer
-
-    def destroy(self, request, *args, **kwargs):
-        document = self.get_object()
-        document.delete()
-        return Response({"detail": "Document deleted successfully."}, status=204)
