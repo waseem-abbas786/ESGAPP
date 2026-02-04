@@ -12,6 +12,9 @@ ENV/
 # Database
 db.sqlite3
 
+# Migrations
+App/esg/migrations/0*.py
+
 # IDE
 .vscode/
 .idea/
