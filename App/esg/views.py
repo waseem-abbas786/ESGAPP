@@ -36,22 +36,20 @@ class SupplierViewSet(viewsets.ModelViewSet):
         supplier.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+from rest_framework import viewsets, status
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
+
 from .models import Document
+from .serializers import DocumentListSerializer, DocumentDetailSerializer, DocumentCreateSerializer
+
 
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all()
-    
+    parser_classes = (MultiPartParser, FormParser)
+
     def get_serializer_class(self):
-        from .serializers import (
-            DocumentListSerializer,
-            DocumentDetailSerializer,
-            DocumentCreateSerializer,
-        )
-        if self.action == "list":
-            return DocumentListSerializer
-        elif self.action == "retrieve":
-            return DocumentDetailSerializer
-        elif self.action == "create":
+        if self.action == "create":
             return DocumentCreateSerializer
         return DocumentListSerializer
 
