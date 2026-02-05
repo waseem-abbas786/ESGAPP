@@ -6,7 +6,6 @@ from .models import ExtractedText, KeywordResult, ESGScore, ScoreBreakdown, Supp
 
 logger = logging.getLogger(__name__)
 
-# Define ESG keywords with their categories and points
 ESG_KEYWORDS = {
     "E": {  
         "environmental policy": 5,
