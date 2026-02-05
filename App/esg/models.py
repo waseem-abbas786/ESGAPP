@@ -122,30 +122,4 @@ class ScoreBreakdown(models.Model):
         return f"{self.factor_name}: {self.earned_points}"
 
 
-# class DashboardCache(models.Model):
-#     supplier = models.OneToOneField(
-#         Supplier, related_name="dashboard_cache", on_delete=models.CASCADE
-#     )
-
-#     cached_score = models.PositiveIntegerField()
-#     cached_risk = models.CharField(max_length=10)
-#     last_sync = models.DateTimeField(auto_now=True)
-
-
-# class AuditLog(models.Model):
-#     ACTIONS = (
-#         ("CREATE", "Create"),
-#         ("UPDATE", "Update"),
-#         ("DELETE", "Delete"),
-#         ("UPLOAD", "Upload"),
-#         ("SCORE", "Score"),
-#     )
-
-#     supplier = models.ForeignKey(
-#         Supplier, related_name="audit_logs", on_delete=models.CASCADE
-#     )
-
-#     action = models.CharField(max_length=20, choices=ACTIONS)
-#     entity_type = models.CharField(max_length=50)
-#     performed_at = models.DateTimeField(auto_now_add=True)
 

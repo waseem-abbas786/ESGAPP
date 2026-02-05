@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 # Define ESG keywords with their categories and points
 ESG_KEYWORDS = {
-    "E": {  # Environmental
+    "E": {  
         "environmental policy": 5,
         "carbon emissions": 5,
         "iso 14001": 8,
@@ -152,16 +152,6 @@ def process_keywords_and_score(extraction: ExtractedText) -> ESGScore:
     supplier.esg_score = total_score
     supplier.risk_level = risk_level
     supplier.save(update_fields=["esg_score", "risk_level"])
-    
-    from .models import DashboardCache
-    DashboardCache.objects.update_or_create(
-        supplier=supplier,
-        defaults={
-            "cached_score": total_score,
-            "cached_risk": risk_level,
-        }
-    )
-    
     logger.info(f"ESG Score {'created' if created else 'updated'} for supplier: {supplier.name}")
     
     return esg_score
