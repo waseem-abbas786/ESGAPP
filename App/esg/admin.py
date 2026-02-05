@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Supplier, Document, ExtractedText, ESGScore, AuditLog, KeywordResult, ScoreBreakdown, DashboardCache
+from .models import Supplier, Document, ExtractedText, ESGScore, KeywordResult, ScoreBreakdown 
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):
@@ -13,9 +13,6 @@ class DocumentAdmin(admin.ModelAdmin):
 class ESGScoreAdmin(admin.ModelAdmin):
     list_display = ("supplier", "total_score", "risk_level", "calculated_at")
 
-@admin.register(AuditLog)
-class AuditLogAdmin(admin.ModelAdmin):
-    list_display = ("supplier", "action", "entity_type", "performed_at")
 
 @admin.register(ExtractedText)
 class ExtractedTextAdmin(admin.ModelAdmin):
@@ -29,6 +26,3 @@ class KeywordResultAdmin(admin.ModelAdmin):
 class ScoreBreakdownAdmin(admin.ModelAdmin):
     list_display = ("factor_name", "earned_points", "max_points", "achieved")
 
-@admin.register(DashboardCache)
-class DashboardCacheAdmin(admin.ModelAdmin):
-    list_display = ("supplier", "cached_score", "cached_risk", "last_sync")
