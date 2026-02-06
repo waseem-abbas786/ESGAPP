@@ -1,0 +1,134 @@
+{% extends 'esg/base.html' %}
+
+{% block title %}{{ supplier.name }} - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold text-gray-800 mb-2">
+            <i class="fas fa-building text-blue-600"></i> {{ supplier.name }}
+        </h1>
+        <p class="text-gray-600">
+            <i class="fas fa-barcode mr-1"></i> {{ supplier.supplier_code }} |
+            <i class="fas fa-globe mr-1"></i> {{ supplier.country }} |
+            <i class="fas fa-tag mr-1"></i> {{ supplier.category }}
+        </p>
+    </div>
+
+    <!-- ESG Score Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+        <!-- Overall Score Card -->
+        <div class="bg-white rounded-lg shadow-lg p-6 text-center">
+            <h3 class="text-gray-600 text-sm font-medium mb-4">Overall ESG Score</h3>
+
+            <div class="relative inline-flex items-center justify-center">
+                <svg class="transform -rotate-90 w-32 h-32">
+                    <circle cx="64" cy="64" r="56" stroke="#e5e7eb" stroke-width="8" fill="none" />
+                    <circle
+                        cx="64"
+                        cy="64"
+                        r="56"
+                        stroke="{% if supplier.esg_score >= 70 %}#10b981{% elif supplier.esg_score >= 40 %}#f59e0b{% else %}#ef4444{% endif %}"
+                        stroke-width="8"
+                        fill="none"
+                        stroke-dasharray="352"
+                        stroke-dashoffset="{% widthratio supplier.esg_score 100 352 %}"
+                        class="transition-all duration-1000"
+                    />
+                </svg>
+
+                <div class="absolute">
+                    <div class="text-4xl font-bold text-gray-800">{{ supplier.esg_score }}</div>
+                    <div class="text-sm text-gray-500">/100</div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <span class="px-4 py-2 inline-flex text-sm leading-5 font-semibold rounded-full
+                    {% if supplier.risk_level == 'HIGH' %}bg-red-100 text-red-800
+                    {% elif supplier.risk_level == 'MEDIUM' %}bg-yellow-100 text-yellow-800
+                    {% else %}bg-green-100 text-green-800{% endif %}">
+                    {{ supplier.get_risk_level_display }} Risk
+                </span>
+            </div>
+        </div>
+
+        <!-- Category Breakdown -->
+        <div class="md:col-span-2 bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-gray-800 text-lg font-semibold mb-6">ESG Category Breakdown</h3>
+
+            {% if esg_score %}
+            <div class="space-y-4">
+
+                <!-- Environmental -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center">
+                            <i class="fas fa-leaf text-green-600 text-xl mr-2"></i>
+                            <span class="font-medium text-gray-700">Environmental</span>
+                        </div>
+                        <span class="text-sm font-bold text-gray-800">{{ esg_score.env_points }} pts</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                            class="bg-green-600 h-3 rounded-full transition-all duration-1000"
+                            style="width: calc({{ esg_score.env_points }} * 2%);">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Social -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center">
+                            <i class="fas fa-users text-blue-600 text-xl mr-2"></i>
+                            <span class="font-medium text-gray-700">Social</span>
+                        </div>
+                        <span class="text-sm font-bold text-gray-800">{{ esg_score.social_points }} pts</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                            class="bg-blue-600 h-3 rounded-full transition-all duration-1000"
+                            style="width: calc({{ esg_score.social_points }} * 2%);">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Governance -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center">
+                            <i class="fas fa-gavel text-purple-600 text-xl mr-2"></i>
+                            <span class="font-medium text-gray-700">Governance</span>
+                        </div>
+                        <span class="text-sm font-bold text-gray-800">{{ esg_score.governance_points }} pts</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                            class="bg-purple-600 h-3 rounded-full transition-all duration-1000"
+                            style="width: calc({{ esg_score.governance_points }} * 2%);">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <p class="text-xs text-gray-500 mt-4">
+                <i class="fas fa-clock mr-1"></i>
+                Last calculated: {{ esg_score.calculated_at|date:"F d, Y H:i" }}
+            </p>
+
+            {% else %}
+            <div class="text-center text-gray-500 py-8">
+                <i class="fas fa-chart-line text-4xl mb-2"></i>
+                <p>Upload your first document to get an ESG score</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

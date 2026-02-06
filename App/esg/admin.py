@@ -3,7 +3,17 @@ from .models import Supplier, Document, ExtractedText, ESGScore, KeywordResult, 
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):
-    list_display = ("name", "country", "category", "esg_score", "risk_level")
+    list_display = (
+        "name",
+        "user",
+        "country",
+        "category",
+        "esg_score",
+        "risk_level",
+    )
+    search_fields = ("name", "supplier_code", "user__username")
+    list_filter = ("risk_level", "country", "category")
+
  
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):

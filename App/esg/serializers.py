@@ -165,7 +165,6 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        # Single DB save; file is part of model fields so it will be saved in same create()
         return Document.objects.create(**validated_data)
 
 

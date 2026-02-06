@@ -1,6 +1,6 @@
 import logging
 from django.db import transaction
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from .models import (
     Document, 
@@ -15,6 +15,7 @@ from .keyword_scoring import (
     calculate_category_scores,
     calculate_total_score,
     determine_risk_level,
+    recalculate_supplier_score,
     ESG_KEYWORDS,
 )
 
@@ -135,4 +136,36 @@ def process_keywords_and_calculate_score(sender, instance: ExtractedText, create
             logger.exception(f"✗ Scoring failed for ExtractedText {instance.pk}: {e}")
             raise
     
+    transaction.on_commit(run)
+
+@receiver(post_delete, sender=ExtractedText)
+def recalc_score_on_extracted_text_delete(sender, instance: ExtractedText, **kwargs):
+    """Recalculate or remove ESG score when an ExtractedText is deleted."""
+    
+    supplier = instance.document.supplier
+
+    def run():
+        try:
+            remaining_extractions = ExtractedText.objects.filter(document__supplier=supplier)
+            
+            if remaining_extractions.exists():
+                logger.info(f"Recalculating ESG score for supplier {supplier.name} due to ExtractedText deletion")
+                recalculate_supplier_score(supplier)
+                logger.info(f"✓ ESG score recalculated for supplier {supplier.name}")
+            else:
+                logger.info(f"No remaining documents for supplier {supplier.name}. Deleting ESGScore and ScoreBreakdown")
+                
+                ESGScore.objects.filter(supplier=supplier).delete()
+                ScoreBreakdown.objects.filter(score__supplier=supplier).delete()
+                
+                supplier.esg_score = None
+                supplier.risk_level = None
+                supplier.save(update_fields=['esg_score', 'risk_level', 'updated_at'])
+                
+                logger.info(f"✓ ESGScore removed for supplier {supplier.name}")
+                
+        except Exception as e:
+            logger.exception(f"✗ Failed to update ESG score for supplier {supplier.name}: {e}")
+            raise
+
     transaction.on_commit(run)

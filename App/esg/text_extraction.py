@@ -1,6 +1,6 @@
 # app/esg/services/text_extraction.py
 from __future__ import annotations
-
+import os
 from dataclasses import dataclass
 
 import fitz  # PyMuPDF
@@ -14,20 +14,21 @@ class ExtractionResult:
     extractor: str
 
 
-def extract_text_from_file(path: str, file_format: str) -> ExtractionResult:
-    fmt = (file_format or "").upper()
+def extract_text_from_file(path: str) -> ExtractionResult:
+    ext = os.path.splitext(path)[1].lower()  
 
-    if fmt == "PDF":
-        # Try fast extractor first; fallback for PDFs where layout extraction is better
+    if ext == ".pdf":
         try:
             return ExtractionResult(text=_pdf_pymupdf(path), extractor="pymupdf")
         except Exception:
             return ExtractionResult(text=_pdf_pdfplumber(path), extractor="pdfplumber")
 
-    if fmt == "DOCX":
+    elif ext == ".docx":
         return ExtractionResult(text=_docx(path), extractor="python-docx")
 
-    raise ValueError(f"Unsupported file_format: {file_format}")
+    else:
+        raise ValueError(f"Unsupported file format: '{ext}'")
+
 
 
 def _pdf_pymupdf(path: str) -> str:
