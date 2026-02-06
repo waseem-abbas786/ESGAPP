@@ -20,7 +20,7 @@ from .serializers import (
     DocumentDetailSerializer,
     DocumentCreateSerializer,
 )
-from .forms import LoginForm, DocumentUploadForm
+from .forms import LoginForm, DocumentUploadForm, SupplierEditForm
 
 
 class SupplierViewSet(viewsets.ModelViewSet):
@@ -392,3 +392,68 @@ def delete_document(request, document_id):
         return redirect('admin_dashboard')
     else:
         return redirect('supplier_dashboard')
+    
+
+@login_required
+def supplier_edit_profile(request):
+    """
+    Allow suppliers to edit their own profile.
+    Staff users are redirected to admin.
+    """
+    if request.user.is_staff:
+        messages.info(request, 'Admins should use the admin panel to edit suppliers.')
+        return redirect('admin_dashboard')
+    
+    try:
+        supplier = request.user.supplier
+    except Supplier.DoesNotExist:
+        messages.error(request, 'Your account is not linked to a supplier.')
+        return redirect('login')
+    
+    if request.method == 'POST':
+        form = SupplierEditForm(request.POST, instance=supplier)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your profile has been updated successfully!')
+            return redirect('supplier_dashboard')
+    else:
+        form = SupplierEditForm(instance=supplier)
+    
+    context = {
+        'form': form,
+        'supplier': supplier,
+    }
+    
+    return render(request, 'esg/supplier_edit_profile.html', context)
+
+
+@login_required
+def admin_edit_supplier(request, supplier_id):
+    """
+    Allow admin to edit any supplier.
+    Non-staff users are redirected.
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'Access denied.')
+        return redirect('supplier_dashboard')
+    
+    supplier = get_object_or_404(Supplier, pk=supplier_id)
+    
+    if request.method == 'POST':
+        form = SupplierEditForm(request.POST, instance=supplier)
+        
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Supplier "{supplier.name}" has been updated successfully!')
+            return redirect('admin_dashboard')
+    else:
+        form = SupplierEditForm(instance=supplier)
+    
+    context = {
+        'form': form,
+        'supplier': supplier,
+        'is_admin_edit': True,  
+    }
+    
+    return render(request, 'esg/admin_edit_supplier.html', context)

@@ -1,3 +1,4 @@
+<!-- templates/esg/supplier_dashboard.html - FIXED VERSION -->
 {% extends 'esg/base.html' %}
 
 {% block title %}{{ supplier.name }} - Dashboard{% endblock %}
@@ -7,24 +8,33 @@
 
     <!-- Header -->
     <div class="mb-8">
-        <h1 class="text-4xl font-bold text-gray-800 mb-2">
-            <i class="fas fa-building text-blue-600"></i> Welcome, {{ supplier.name }}
-        </h1>
-        <p class="text-gray-600">
-            <i class="fas fa-barcode mr-1"></i> {{ supplier.supplier_code }} |
-            <i class="fas fa-globe mr-1"></i> {{ supplier.country }} |
-            <i class="fas fa-tag mr-1"></i> {{ supplier.category }}
-        </p>
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">
+                    <i class="fas fa-building text-blue-600"></i> Welcome, {{ supplier.name }}
+                </h1>
+                <p class="text-gray-600">
+                    <i class="fas fa-barcode mr-1"></i> {{ supplier.supplier_code }} |
+                    <i class="fas fa-globe mr-1"></i> {{ supplier.country }} |
+                    <i class="fas fa-tag mr-1"></i> {{ supplier.category }}
+                </p>
+            </div>
+
+        </div>
     </div>
 
+    <!-- Action Buttons -->
     <div class="mb-6">
-    <a href="{% url 'upload_document' %}" 
-       class="bg-blue-600 text-white px-6 py-3 rounded-lg shadow hover:bg-blue-700 inline-flex items-center">
-        <i class="fas fa-upload mr-2"></i> Upload Document
-    </a>
+        <a href="{% url 'upload_document' %}" 
+           class="bg-blue-600 text-white px-6 py-3 rounded-lg shadow hover:bg-blue-700 inline-flex items-center">
+            <i class="fas fa-upload mr-2"></i> Upload New Document
+        </a>
     </div>
+
+    <!-- ESG Score Overview -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
 
+        <!-- Overall Score Card -->
         <div class="bg-white rounded-lg shadow-lg p-6 text-center">
             <h3 class="text-gray-600 text-sm font-medium mb-4">Overall ESG Score</h3>
 
@@ -134,7 +144,137 @@
         </div>
     </div>
 
-    {{ block.super }}
+    <!-- Documents Section -->
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-xl font-semibold text-gray-800">
+                <i class="fas fa-file-alt mr-2"></i> Your Documents
+                <span class="text-sm font-normal text-gray-600">({{ total_documents }} total)</span>
+            </h2>
+        </div>
+
+        <div class="p-6">
+            {% if documents %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">File Name</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Format</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Uploaded</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for doc in documents %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-4 text-sm text-gray-900">{{ forloop.counter }}</td>
+                            <td class="px-4 py-4">
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                    {{ doc.get_document_type_display }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-4 text-sm text-gray-900">
+                                <i class="fas fa-file-pdf text-red-500 mr-1"></i>
+                                {{ doc.file.name|slice:":40" }}{% if doc.file.name|length > 40 %}...{% endif %}
+                            </td>
+                            <td class="px-4 py-4 text-sm">
+                                <span class="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
+                                    {{ doc.file_format }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-4 text-sm text-gray-600">
+                                <i class="fas fa-calendar mr-1"></i>
+                                {{ doc.uploaded_at|date:"M d, Y" }}<br>
+                                <span class="text-xs text-gray-400">{{ doc.uploaded_at|date:"H:i" }}</span>
+                            </td>
+                            <td class="px-4 py-4">
+                                {% if doc.extraction %}
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    <i class="fas fa-check-circle mr-1"></i> Processed
+                                </span>
+                                {% else %}
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    <i class="fas fa-spinner fa-spin mr-1"></i> Processing
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4 text-sm flex items-center gap-3">
+   
+
+    <!-- Edit Supplier Profile -->
+    <a href="{% url 'supplier_edit_profile' %}" 
+       class="text-blue-600 hover:text-blue-900"
+       title="Edit Supplier Profile">
+        <i class="fas fa-pencil-alt"></i>
+    </a>
+
+    <!-- Delete -->
+    <form method="post" 
+          action="{% url 'delete_document' doc.id %}" 
+          onsubmit="return confirm('Are you sure you want to delete this document?');">
+        {% csrf_token %}
+        <button type="submit" 
+                class="text-red-600 hover:text-red-900"
+                title="Delete">
+            <i class="fas fa-trash"></i>
+        </button>
+    </form>
+</td>
+
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Document Statistics -->
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Total Documents</p>
+                            <p class="text-2xl font-bold text-blue-600">{{ total_documents }}</p>
+                        </div>
+                        <i class="fas fa-file-alt text-blue-600 text-3xl"></i>
+                    </div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Processed</p>
+                            <p class="text-2xl font-bold text-green-600">{{ processed_documents }}</p>
+                        </div>
+                        <i class="fas fa-check-circle text-green-600 text-3xl"></i>
+                    </div>
+                </div>
+                <div class="bg-yellow-50 p-4 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">Processing</p>
+                            <p class="text-2xl font-bold text-yellow-600">{{ processing_documents }}</p>
+                        </div>
+                        <i class="fas fa-spinner text-yellow-600 text-3xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+            <div class="text-center py-12">
+                <i class="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
+                <h3 class="text-xl font-medium text-gray-700 mb-2">No Documents Yet</h3>
+                <p class="text-gray-500 mb-6">Upload your first ESG document to get started</p>
+                <a href="{% url 'upload_document' %}" 
+                   class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-upload mr-2"></i> Upload Your First Document
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 
 </div>
 {% endblock %}

@@ -128,3 +128,61 @@ class SupplierForm(forms.ModelForm):
                 raise forms.ValidationError('This supplier code already exists.')
         
         return supplier_code
+    
+
+
+
+class SupplierEditForm(forms.ModelForm):
+    """
+    Form for suppliers to edit their profile.
+    Excludes supplier_code, esg_score, risk_level (auto-calculated fields).
+    """
+    
+    class Meta:
+        model = Supplier
+        fields = ['name', 'country', 'category']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Company Name'
+            }),
+            'country': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Country'
+            }),
+            'category': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'e.g., Manufacturing, Technology, Services'
+            }),
+        }
+        labels = {
+            'name': 'Company Name',
+            'country': 'Country',
+            'category': 'Business Category',
+        }
+        help_texts = {
+            'name': 'Your official company name',
+            'country': 'Country where your company is registered',
+            'category': 'Primary business category or industry',
+        }
+    
+    def clean_name(self):
+        """Ensure name is not empty."""
+        name = self.cleaned_data.get('name', '').strip()
+        if not name:
+            raise forms.ValidationError('Company name cannot be blank.')
+        return name
+    
+    def clean_country(self):
+        """Ensure country is not empty."""
+        country = self.cleaned_data.get('country', '').strip()
+        if not country:
+            raise forms.ValidationError('Country cannot be blank.')
+        return country
+    
+    def clean_category(self):
+        """Ensure category is not empty."""
+        category = self.cleaned_data.get('category', '').strip()
+        if not category:
+            raise forms.ValidationError('Category cannot be blank.')
+        return category

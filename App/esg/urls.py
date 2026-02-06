@@ -14,6 +14,8 @@ urlpatterns = [
 
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('supplier/<int:supplier_id>/', views.supplier_detail, name='supplier_detail'),
+    path('supplier/<int:supplier_id>/edit/', views.admin_edit_supplier, name='admin_edit_supplier'),
+     path('profile/edit/', views.supplier_edit_profile, name='supplier_edit_profile'), 
     path('supplier-dashboard/', views.supplier_dashboard, name='supplier_dashboard'),
     path('documents/', views.supplier_documents, name='supplier_documents'),
     path('upload/', views.upload_document, name='upload_document'),
