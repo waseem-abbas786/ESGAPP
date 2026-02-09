@@ -1,5 +1,7 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
+
 
 class Supplier(models.Model):
     RISK_CHOICES = (
@@ -8,21 +10,33 @@ class Supplier(models.Model):
         ("LOW", "Low"),
     )
 
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='supplier',
+        null=True,  
+        blank=True,  
+        help_text="Django user account for this supplier"
+    )
+
     supplier_code = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=150)
     country = models.CharField(max_length=80)
     category = models.CharField(max_length=60)
 
-    esg_score = models.PositiveIntegerField(default=0)
-    risk_level = models.CharField(
-        max_length=10, choices=RISK_CHOICES, default="HIGH"
-    )
-
+    esg_score = models.PositiveIntegerField(null=True, blank=True)
+    risk_level = models.CharField(max_length=10, choices=RISK_CHOICES, null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Supplier'
+        verbose_name_plural = 'Suppliers'
 
 
 class Document(models.Model):
@@ -120,6 +134,5 @@ class ScoreBreakdown(models.Model):
 
     def __str__(self):
         return f"{self.factor_name}: {self.earned_points}"
-
 
 

@@ -1,0 +1,181 @@
+<!-- templates/esg/supplier_edit_profile.html -->
+{% extends 'esg/base.html' %} {% block title %}Edit Profile - {{ supplier.name
+}}{% endblock %} {% block content %}
+<div class="container mx-auto px-4 max-w-2xl">
+  <!-- Breadcrumb -->
+  <nav class="mb-6 text-sm">
+    <ol class="flex items-center space-x-2 text-gray-600">
+      <li>
+        <a href="{% url 'supplier_dashboard' %}" class="hover:text-blue-600"
+          >Dashboard</a
+        >
+      </li>
+      <li><i class="fas fa-chevron-right text-xs"></i></li>
+      <li class="text-gray-900 font-medium">Edit Profile</li>
+    </ol>
+  </nav>
+
+  <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+    <div class="px-6 py-4 bg-blue-600 text-white">
+      <h2 class="text-2xl font-bold">
+        <i class="fas fa-edit mr-2"></i> Edit Your Profile
+      </h2>
+    </div>
+
+    <div class="p-6">
+      <!-- Info Alert -->
+      <div class="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6">
+        <div class="flex">
+          <i class="fas fa-info-circle text-blue-600 mt-1 mr-3"></i>
+          <div>
+            <p class="text-sm text-gray-700">
+              You can update your company information below. Your supplier code
+              cannot be changed.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Form -->
+      <form method="post" class="space-y-6">
+        {% csrf_token %}
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            <i class="fas fa-barcode mr-1"></i> Supplier Code
+          </label>
+          <input
+            type="text"
+            value="{{ supplier.supplier_code }}"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+            disabled
+          />
+          <p class="mt-1 text-sm text-gray-500">
+            Supplier code cannot be changed
+          </p>
+        </div>
+
+        <!-- Company Name -->
+        <div>
+          <label
+            for="{{ form.name.id_for_label }}"
+            class="block text-sm font-medium text-gray-700 mb-2"
+          >
+            <i class="fas fa-building mr-1"></i> Company Name *
+          </label>
+          <input
+            type="text"
+            name="{{ form.name.name }}"
+            id="{{ form.name.id_for_label }}"
+            value="{{ form.name.value|default:supplier.name }}"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          />
+          {% if form.name.errors %}
+          <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Country -->
+        <div>
+          <label
+            for="{{ form.country.id_for_label }}"
+            class="block text-sm font-medium text-gray-700 mb-2"
+          >
+            <i class="fas fa-globe mr-1"></i> Country *
+          </label>
+          <input
+            type="text"
+            name="{{ form.country.name }}"
+            id="{{ form.country.id_for_label }}"
+            value="{{ form.country.value|default:supplier.country }}"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          />
+          {% if form.country.errors %}
+          <p class="mt-1 text-sm text-red-600">{{ form.country.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label
+            for="{{ form.category.id_for_label }}"
+            class="block text-sm font-medium text-gray-700 mb-2"
+          >
+            <i class="fas fa-tag mr-1"></i> Category *
+          </label>
+          <input
+            type="text"
+            name="{{ form.category.name }}"
+            id="{{ form.category.id_for_label }}"
+            value="{{ form.category.value|default:supplier.category }}"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="e.g., Manufacturing, Technology, Services"
+            required
+          />
+          {% if form.category.errors %}
+          <p class="mt-1 text-sm text-red-600">{{ form.category.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Form-wide errors -->
+        {% if form.non_field_errors %}
+        <div class="bg-red-50 border border-red-200 rounded p-4">
+          <p class="text-sm text-red-600">{{ form.non_field_errors.0 }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Read-only Information -->
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <h4 class="text-sm font-semibold text-gray-700 mb-3">
+            Account Information (Read-only)
+          </h4>
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span class="text-gray-600">ESG Score:</span>
+              <span class="font-semibold text-gray-900"
+                >{{ supplier.esg_score }}/100</span
+              >
+            </div>
+            <div>
+              <span class="text-gray-600">Risk Level:</span>
+              <span
+                class="px-2 py-1 text-xs font-semibold rounded {% if supplier.risk_level == 'HIGH' %}bg-red-100 text-red-800 {% elif supplier.risk_level == 'MEDIUM' %}bg-yellow-100 text-yellow-800 {% else %}bg-green-100 text-green-800{% endif %}"
+              >
+                {{ supplier.get_risk_level_display }}
+              </span>
+            </div>
+            <div>
+              <span class="text-gray-600">Created:</span>
+              <span class="font-semibold text-gray-900"
+                >{{ supplier.created_at|date:"M d, Y" }}</span
+              >
+            </div>
+            <div>
+              <span class="text-gray-600">Last Updated:</span>
+              <span class="font-semibold text-gray-900"
+                >{{ supplier.updated_at|date:"M d, Y" }}</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex justify-between pt-4 border-t">
+          <a
+            href="{% url 'supplier_dashboard' %}"
+            class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+          >
+            <i class="fas fa-arrow-left mr-2"></i> Cancel
+          </a>
+          <button
+            type="submit"
+            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow"
+          >
+            <i class="fas fa-save mr-2"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

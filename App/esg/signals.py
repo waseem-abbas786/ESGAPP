@@ -15,6 +15,7 @@ from .keyword_scoring import (
     calculate_category_scores,
     calculate_total_score,
     determine_risk_level,
+    recalculate_supplier_score,
     ESG_KEYWORDS,
     recalculate_supplier_score,
 )
