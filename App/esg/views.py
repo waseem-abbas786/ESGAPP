@@ -17,7 +17,6 @@ from .serializers import (
     SupplierCreateSerializer,
     SupplierUpdateSerializer,
     DocumentListSerializer,
-    DocumentDetailSerializer,
     DocumentCreateSerializer,
 )
 from .forms import LoginForm, DocumentUploadForm, SupplierEditForm

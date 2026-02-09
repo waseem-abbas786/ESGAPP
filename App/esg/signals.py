@@ -17,6 +17,7 @@ from .keyword_scoring import (
     determine_risk_level,
     recalculate_supplier_score,
     ESG_KEYWORDS,
+    recalculate_supplier_score,
 )
 
 logger = logging.getLogger(__name__)
