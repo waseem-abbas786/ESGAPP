@@ -1,8 +1,7 @@
-<!-- templates/esg/supplier_edit_profile.html -->
+
 {% extends 'esg/base.html' %} {% block title %}Edit Profile - {{ supplier.name
 }}{% endblock %} {% block content %}
 <div class="container mx-auto px-4 max-w-2xl">
-  <!-- Breadcrumb -->
   <nav class="mb-6 text-sm">
     <ol class="flex items-center space-x-2 text-gray-600">
       <li>
@@ -23,7 +22,6 @@
     </div>
 
     <div class="p-6">
-      <!-- Info Alert -->
       <div class="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6">
         <div class="flex">
           <i class="fas fa-info-circle text-blue-600 mt-1 mr-3"></i>
@@ -35,8 +33,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Edit Form -->
       <form method="post" class="space-y-6">
         {% csrf_token %}
         <div>
@@ -54,7 +50,7 @@
           </p>
         </div>
 
-        <!-- Company Name -->
+  
         <div>
           <label
             for="{{ form.name.id_for_label }}"
@@ -74,8 +70,6 @@
           <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
           {% endif %}
         </div>
-
-        <!-- Country -->
         <div>
           <label
             for="{{ form.country.id_for_label }}"
@@ -116,15 +110,11 @@
           <p class="mt-1 text-sm text-red-600">{{ form.category.errors.0 }}</p>
           {% endif %}
         </div>
-
-        <!-- Form-wide errors -->
         {% if form.non_field_errors %}
         <div class="bg-red-50 border border-red-200 rounded p-4">
           <p class="text-sm text-red-600">{{ form.non_field_errors.0 }}</p>
         </div>
         {% endif %}
-
-        <!-- Read-only Information -->
         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
           <h4 class="text-sm font-semibold text-gray-700 mb-3">
             Account Information (Read-only)
@@ -158,8 +148,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Buttons -->
         <div class="flex justify-between pt-4 border-t">
           <a
             href="{% url 'supplier_dashboard' %}"
