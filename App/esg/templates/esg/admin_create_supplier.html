@@ -1,0 +1,180 @@
+<!-- templates/esg/admin_create_supplier.html -->
+{% extends 'esg/base.html' %}
+
+{% block title %}Create New Supplier{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 max-w-3xl">
+    
+    <!-- Breadcrumb -->
+    <nav class="mb-6 text-sm">
+        <ol class="flex items-center space-x-2 text-gray-600">
+            <li><a href="{% url 'admin_dashboard' %}" class="hover:text-blue-600">Admin Dashboard</a></li>
+            <li><i class="fas fa-chevron-right text-xs"></i></li>
+            <li class="text-gray-900 font-medium">Create Supplier</li>
+        </ol>
+    </nav>
+    
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div class="px-6 py-4 bg-blue-600 text-white">
+            <h2 class="text-2xl font-bold">
+                <i class="fas fa-plus-circle mr-2"></i> Create New Supplier
+            </h2>
+        </div>
+        
+        <div class="p-6">
+            <!-- Info Alert -->
+            <div class="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6">
+                <div class="flex">
+                    <i class="fas fa-info-circle text-blue-600 mt-1 mr-3"></i>
+                    <div>
+                        <p class="text-sm text-gray-700">
+                            A user account will be automatically created for this supplier. 
+                            The username and password will be displayed after creation.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Create Form -->
+            <form method="post" id="supplierForm">
+                {% csrf_token %}
+                
+                <div class="space-y-6">
+                    <!-- Supplier Code -->
+                    <div>
+                        <label for="{{ form.supplier_code.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-barcode mr-1"></i> Supplier Code *
+                        </label>
+                        <input 
+                            type="text" 
+                            name="{{ form.supplier_code.name }}" 
+                            id="{{ form.supplier_code.id_for_label }}"
+                            value="{{ form.supplier_code.value|default:'' }}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="e.g., SUP001"
+                            required
+                        >
+                        {% if form.supplier_code.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.supplier_code.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">Unique identifier for the supplier (will be used for username)</p>
+                    </div>
+                    
+                    <!-- Company Name -->
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-building mr-1"></i> Company Name *
+                        </label>
+                        <input 
+                            type="text" 
+                            name="{{ form.name.name }}" 
+                            id="{{ form.name.id_for_label }}"
+                            value="{{ form.name.value|default:'' }}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter company name"
+                            required
+                        >
+                        {% if form.name.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Country -->
+                    <div>
+                        <label for="{{ form.country.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-globe mr-1"></i> Country *
+                        </label>
+                        <input 
+                            type="text" 
+                            name="{{ form.country.name }}" 
+                            id="{{ form.country.id_for_label }}"
+                            value="{{ form.country.value|default:'' }}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter country"
+                            required
+                        >
+                        {% if form.country.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.country.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Category -->
+                    <div>
+                        <label for="{{ form.category.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-tag mr-1"></i> Category *
+                        </label>
+                        <input 
+                            type="text" 
+                            name="{{ form.category.name }}" 
+                            id="{{ form.category.id_for_label }}"
+                            value="{{ form.category.value|default:'' }}"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="e.g., Manufacturing, Technology"
+                            required
+                        >
+                        {% if form.category.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.category.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- User Account Section -->
+                    <div class="border-t pt-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                            <i class="fas fa-user-plus mr-2"></i> User Account
+                        </h3>
+                        
+                        <!-- Create User Account -->
+                        <div class="flex items-center mb-4">
+                            <input 
+                                type="checkbox" 
+                                name="create_user_account" 
+                                id="create_user_account"
+                                checked
+                                class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            >
+                            <label for="create_user_account" class="ml-2 text-sm font-medium text-gray-700">
+                                Create user account automatically
+                            </label>
+                        </div>
+                        
+                        <!-- Email (optional) -->
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-envelope mr-1"></i> Email (Optional)
+                            </label>
+                            <input 
+                                type="email" 
+                                name="email" 
+                                id="email"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="supplier@example.com"
+                            >
+                            <p class="mt-1 text-sm text-gray-500">If not provided, a default email will be generated</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Form-wide errors -->
+                    {% if form.non_field_errors %}
+                    <div class="bg-red-50 border border-red-200 rounded p-4">
+                        <p class="text-sm text-red-600">{{ form.non_field_errors.0 }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Buttons -->
+                <div class="flex justify-between pt-6 border-t mt-6">
+                    <a href="{% url 'admin_dashboard' %}" 
+                       class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                        <i class="fas fa-arrow-left mr-2"></i> Cancel
+                    </a>
+                    <button type="submit" 
+                            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow">
+                        <i class="fas fa-plus mr-2"></i> Create Supplier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

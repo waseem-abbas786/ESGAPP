@@ -1,458 +1,492 @@
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect,render
 from django.contrib import messages
-from django.db.models import Q, Count
+from django.contrib.auth import logout
+from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.views.generic import ListView, DetailView, UpdateView, DeleteView, CreateView
+from django.urls import reverse_lazy
 
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.exceptions import ValidationError
 
-from .models import Supplier, Document, ExtractedText, ESGScore, KeywordResult, ScoreBreakdown
+from .models import Supplier, Document
 from .serializers import (
-    SupplierListSerializer,
-    SupplierDetailSerializer,
-    SupplierCreateSerializer,
-    SupplierUpdateSerializer,
-    DocumentListSerializer,
+    SupplierListSerializer, SupplierDetailSerializer,
+    SupplierCreateSerializer, SupplierUpdateSerializer,
+    DocumentListSerializer, DocumentDetailSerializer,
     DocumentCreateSerializer,
 )
-from .forms import LoginForm, DocumentUploadForm, SupplierEditForm
+from .forms import LoginForm, DocumentUploadForm, SupplierEditForm, SupplierCreateForm
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.db import transaction
+from django.contrib.auth.hashers import make_password
+import secrets
+import string
 
 
-class SupplierViewSet(viewsets.ModelViewSet):
-    queryset = Supplier.objects.all()
-    serializer_class = SupplierListSerializer
+class ContextualSerializerMixin:
+    """Returns different serializers based on action."""
+    serializer_map = {}
     
     def get_serializer_class(self):
-        """Return appropriate serializer based on action."""
-        if self.action == "list":
-            return SupplierListSerializer
-        elif self.action == "retrieve":
-            return SupplierDetailSerializer
-        elif self.action == "create":
-            return SupplierCreateSerializer
-        elif self.action in ["update", "partial_update"]:
-            return SupplierUpdateSerializer
-        return SupplierListSerializer
-    
+        return self.serializer_map.get(self.action, self.serializer_class)
+
+
+class SupplierOwnershipMixin:
+    """Filters queryset: staff sees all, users see only their own."""
     def get_queryset(self):
         if self.request.user.is_staff:
-            return Supplier.objects.all()
-        else:
-            # Regular users can only see their own supplier
-            try:
-                return Supplier.objects.filter(user=self.request.user)
-            except:
-                return Supplier.objects.none()
+            return self.queryset
+        try:
+            return self.queryset.filter(user=self.request.user)
+        except:
+            return self.queryset.none()
+
+
+class DocumentOwnershipMixin:
+    """Filters queryset: staff sees all, users see only their supplier's docs."""
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return self.queryset
+        try:
+            return self.queryset.filter(supplier=self.request.user.supplier)
+        except:
+            return self.queryset.none()
+    
+    def _check_document_ownership(self, document):
+        """Raises 403 if non-staff user doesn't own this document."""
+        if self.request.user.is_staff:
+            return
+        try:
+            if document.supplier != self.request.user.supplier:
+                raise ValidationError("You can only access your own documents.")
+        except Supplier.DoesNotExist:
+            raise ValidationError("Access denied.")
+
+
+
+class SupplierViewSet(ContextualSerializerMixin, SupplierOwnershipMixin, viewsets.ModelViewSet):
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierListSerializer
+    serializer_map = {
+        'list': SupplierListSerializer,
+        'retrieve': SupplierDetailSerializer,
+        'create': SupplierCreateSerializer,
+        'update': SupplierUpdateSerializer,
+        'partial_update': SupplierUpdateSerializer,
+    }
     
     def destroy(self, request, *args, **kwargs):
         supplier = self.get_object()
-        supplier_name = supplier.name
+        name = supplier.name
         supplier.delete()
         return Response(
-            {"detail": f"Supplier '{supplier_name}' deleted successfully."},
+            {'detail': f"Supplier '{name}' deleted successfully."},
             status=status.HTTP_204_NO_CONTENT
         )
 
 
-class DocumentViewSet(viewsets.ModelViewSet):
-
+class DocumentViewSet(ContextualSerializerMixin, DocumentOwnershipMixin, viewsets.ModelViewSet):
     queryset = Document.objects.all()
+    serializer_class = DocumentListSerializer
     parser_classes = (MultiPartParser, FormParser)
-    
-    def get_serializer_class(self):
-        if self.action == "create":
-            return DocumentCreateSerializer
-        elif self.action == "retrieve":
-            return DocumentDetailSerializer
-        return DocumentListSerializer
-    
-    def get_queryset(self):
-        if self.request.user.is_staff:
-            return Document.objects.all()
-        else:
-            try:
-                supplier = self.request.user.supplier
-                return Document.objects.filter(supplier=supplier)
-            except:
-                return Document.objects.none()
+    serializer_map = {
+        'list': DocumentListSerializer,
+        'retrieve': DocumentDetailSerializer,
+        'create': DocumentCreateSerializer,
+    }
     
     def perform_create(self, serializer):
-        """
-        Set supplier when creating document.
-        For non-staff users, automatically set their supplier.
-        """
+        """Auto-assign supplier for non-staff users."""
         if not self.request.user.is_staff:
             try:
-                supplier = self.request.user.supplier
-                serializer.save(supplier=supplier)
+                serializer.save(supplier=self.request.user.supplier)
             except Supplier.DoesNotExist:
-                from rest_framework.exceptions import ValidationError
                 raise ValidationError("User is not linked to a supplier")
         else:
             serializer.save()
     
     def destroy(self, request, *args, **kwargs):
         document = self.get_object()
-        if not request.user.is_staff:
-            try:
-                supplier = request.user.supplier
-                if document.supplier != supplier:
-                    return Response(
-                        {"detail": "You can only delete your own documents."},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-            except Supplier.DoesNotExist:
-                return Response(
-                    {"detail": "Access denied."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+        self._check_document_ownership(document)
         
-        document_name = document.file.name
+        name = document.file.name
         document.delete()
         return Response(
-            {"detail": f"Document '{document_name}' deleted successfully."},
+            {'detail': f"Document '{name}' deleted successfully."},
             status=status.HTTP_204_NO_CONTENT
         )
 
 
 
+class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """Only staff users can access."""
+    def test_func(self):
+        return self.request.user.is_staff
+    
+    def handle_no_permission(self):
+        messages.error(self.request, 'You do not have permission to access the admin dashboard.')
+        return redirect('supplier_dashboard')
 
-def login_view(request):
-    """
-    Login view for both admin and supplier users.
-    Redirects to appropriate dashboard based on user type.
-    """
-    # Redirect if already logged in
-    if request.user.is_authenticated:
-        if request.user.is_staff:
+
+class SupplierUserRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """Only non-staff users with a linked supplier can access."""
+    def test_func(self):
+        if self.request.user.is_staff:
+            return False
+        return hasattr(self.request.user, 'supplier')
+    
+    def handle_no_permission(self):
+        if self.request.user.is_staff:
             return redirect('admin_dashboard')
-        else:
+        
+        messages.error(self.request, 'Your account is not linked to a supplier. Please contact admin.')
+        logout(self.request)
+        return redirect('login')
+
+
+class SupplierContextMixin:
+    """Adds supplier object to context."""
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['supplier'] = getattr(self.request.user, 'supplier', None)
+        return context
+
+
+class ESGScoreContextMixin:
+    """Adds ESG score to context for the current supplier."""
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        supplier = context.get('supplier') or getattr(self.request.user, 'supplier', None)
+        context['esg_score'] = getattr(supplier, 'score', None) if supplier else None
+        return context
+
+
+class CustomLoginView(LoginView):
+    template_name = 'esg/login.html'
+    form_class = LoginForm
+    redirect_authenticated_user = True
+    
+    def get_success_url(self):
+        return reverse_lazy('admin_dashboard' if self.request.user.is_staff else 'supplier_dashboard')
+    
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, f'Welcome back, {self.request.user.username}!')
+        return response
+
+
+class CustomLogoutView(LoginRequiredMixin, LogoutView):
+    next_page = 'login'
+    
+    def dispatch(self, request, *args, **kwargs):
+        messages.success(request, 'You have been logged out successfully.')
+        return super().dispatch(request, *args, **kwargs)
+
+
+class AdminDashboardView(StaffRequiredMixin, ListView):
+    model = Supplier
+    template_name = 'esg/admin_dashboard.html'
+    context_object_name = 'suppliers'
+    
+    def get_queryset(self):
+        return Supplier.objects.select_related('user').prefetch_related('documents')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        suppliers = context['suppliers']
+        for s in suppliers:
+            s.esg_score = getattr(getattr(s, 'score', None), 'total_score', None)
+            s.risk_level = getattr(getattr(s, 'score', None), 'risk_level', None)
+        
+        risk_counts = {'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+        for s in suppliers:
+            risk_counts[s.risk_level or 'HIGH'] += 1
+        
+        context['high_risk_count'] = risk_counts['HIGH']
+        context['medium_risk_count'] = risk_counts['MEDIUM']
+        context['low_risk_count'] = risk_counts['LOW']
+        
+        return context
+
+
+class SupplierDetailView(StaffRequiredMixin, DetailView):
+    model = Supplier
+    template_name = 'esg/supplier_detail.html'
+    context_object_name = 'supplier'
+    pk_url_kwarg = 'supplier_id'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['documents'] = self.object.documents.order_by('-uploaded_at')
+        context['esg_score'] = getattr(self.object, 'score', None)
+        return context
+
+
+class AdminEditSupplierView(StaffRequiredMixin, UpdateView):
+    model = Supplier
+    form_class = SupplierEditForm
+    template_name = 'esg/admin_supplier_edit.html'
+    pk_url_kwarg = 'supplier_id'
+    success_url = reverse_lazy('admin_dashboard')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['supplier'] = self.object
+        context['is_admin_edit'] = True
+        return context
+    
+    def form_valid(self, form):
+        messages.success(self.request, f'Supplier "{self.object.name}" has been updated successfully!')
+        return super().form_valid(form)
+
+
+class SupplierDashboardView(SupplierUserRequiredMixin, SupplierContextMixin, ESGScoreContextMixin, ListView):
+    model = Document
+    template_name = 'esg/supplier_dashboard.html'
+    context_object_name = 'documents'
+    
+    def get_queryset(self):
+        return self.request.user.supplier.documents.order_by('-uploaded_at')
+
+
+class SupplierEditProfileView(SupplierUserRequiredMixin, SupplierContextMixin, UpdateView):
+    model = Supplier
+    form_class = SupplierEditForm
+    template_name = 'esg/supplier_edit_profile.html'
+    success_url = reverse_lazy('supplier_dashboard')
+    
+    def get_object(self, queryset=None):
+        return self.request.user.supplier
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Your profile has been updated successfully!')
+        return super().form_valid(form)
+
+
+class SupplierDocumentsView(SupplierUserRequiredMixin, SupplierContextMixin, ListView):
+    model = Document
+    template_name = 'esg/documents.html'
+    context_object_name = 'documents'
+    
+    def get_queryset(self):
+        return self.request.user.supplier.documents.order_by('-uploaded_at')
+
+
+class DocumentUploadView(SupplierUserRequiredMixin, SupplierContextMixin, CreateView):
+    model = Document
+    form_class = DocumentUploadForm
+    template_name = 'esg/upload_document.html'
+    success_url = reverse_lazy('supplier_dashboard')
+    
+    def form_valid(self, form):
+        form.instance.supplier = self.request.user.supplier
+        messages.success(
+            self.request,
+            'Document uploaded successfully! ESG scoring will be completed automatically.'
+        )
+        return super().form_valid(form)
+
+
+class DocumentDetailView(LoginRequiredMixin, DetailView):
+    model = Document
+    template_name = 'esg/document_detail.html'
+    context_object_name = 'document'
+    pk_url_kwarg = 'document_id'
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Check ownership for non-staff users."""
+        document = self.get_object()
+        
+        if not request.user.is_staff:
+            try:
+                if document.supplier != request.user.supplier:
+                    messages.error(request, 'You can only view your own documents.')
+                    return redirect('supplier_dashboard')
+            except:
+                messages.error(request, 'Access denied.')
+                return redirect('login')
+        
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        extraction = getattr(self.object, 'extraction', None)
+        keywords = extraction.keywords.order_by('esg_category', 'keyword') if extraction else []
+        
+        keyword_summary = {'E': [], 'S': [], 'G': []}
+        for kw in keywords:
+            keyword_summary[kw.esg_category].append(kw)
+        
+        context['extraction'] = extraction
+        context['keywords'] = keywords
+        context['keyword_summary'] = keyword_summary
+        
+        return context
+
+
+class DocumentDeleteView(LoginRequiredMixin, DeleteView):
+    model = Document
+    pk_url_kwarg = 'document_id'
+    
+    def get_success_url(self):
+        return reverse_lazy('admin_dashboard' if self.request.user.is_staff else 'supplier_dashboard')
+    
+    def dispatch(self, request, *args, **kwargs):
+        """Only allow POST and check ownership."""
+        if request.method != 'POST':
             return redirect('supplier_dashboard')
-    
-    form = LoginForm(request.POST or None)
-    
-    if request.method == 'POST' and form.is_valid():
-        username = form.cleaned_data['username']
-        password = form.cleaned_data['password']
         
-        user = authenticate(request, username=username, password=password)
+        document = self.get_object()
         
-        if user is not None:
-            login(request, user)
-            
-            # Success message
-            messages.success(request, f'Welcome back, {user.username}!')
-            
-            # Redirect based on user type
-            if user.is_staff:
-                return redirect('admin_dashboard')
-            else:
-                return redirect('supplier_dashboard')
-        else:
-            form.add_error(None, "Invalid username or password")
+        if not request.user.is_staff:
+            try:
+                if document.supplier != request.user.supplier:
+                    messages.error(request, 'You can only delete your own documents.')
+                    return redirect('supplier_dashboard')
+            except:
+                messages.error(request, 'Access denied.')
+                return redirect('login')
+        
+        return super().dispatch(request, *args, **kwargs)
     
-    return render(request, 'esg/login.html', {'form': form})
+    def delete(self, request, *args, **kwargs):
+        document = self.get_object()
+        name = document.file.name
+        response = super().delete(request, *args, **kwargs)
+        messages.success(request, f'Document "{name}" deleted successfully.')
+        return response
+    
+# Add these views to your views.py
+
+
 
 
 @login_required
-def logout_view(request):
-    """Logout the current user."""
-    logout(request)
-    messages.success(request, 'You have been logged out successfully.')
-    return redirect('login')
-
-
-# ============================================================================
-# Admin Dashboard (Template-based)
-# ============================================================================
-
-@login_required
-def admin_dashboard(request):
+def admin_create_supplier(request):
+    """
+    Allow admin to create a new supplier with automatic user account creation.
+    Shows username and password after creation.
+    """
     if not request.user.is_staff:
-        messages.error(request, 'You do not have permission to access the admin dashboard.')
+        messages.error(request, 'Access denied. Only admins can create suppliers.')
         return redirect('supplier_dashboard')
-
-    # Fetch suppliers and related objects
-    suppliers = Supplier.objects.all().select_related('user').prefetch_related('documents')
-
-    # Safely assign ESG fields from related score (if exists)
-    for supplier in suppliers:
-        supplier.esg_score = getattr(getattr(supplier, 'score', None), 'total_score', None)
-        supplier.risk_level = getattr(getattr(supplier, 'score', None), 'risk_level', None)
-
-    # Calculate statistics using updated fields
-    high_risk_count = sum(1 for s in suppliers if s.risk_level == 'HIGH')
-    medium_risk_count = sum(1 for s in suppliers if s.risk_level == 'MEDIUM')
-    low_risk_count = sum(1 for s in suppliers if s.risk_level == 'LOW')
-
-    context = {
-        'suppliers': suppliers,
-        'high_risk_count': high_risk_count,
-        'medium_risk_count': medium_risk_count,
-        'low_risk_count': low_risk_count,
-    }
-
-    return render(request, 'esg/admin_dashboard.html', context)
-
-
-
-@login_required
-def supplier_detail(request, supplier_id):
-    if not request.user.is_staff:
-        messages.error(request, 'Access denied.')
-        return redirect('supplier_dashboard')
-    
-    supplier = get_object_or_404(Supplier, pk=supplier_id)
-    documents = supplier.documents.all().order_by('-uploaded_at')
-    
-    try:
-        esg_score = supplier.score
-    except ESGScore.DoesNotExist:
-        esg_score = None
-    
-    context = {
-        'supplier': supplier,
-        'documents': documents,
-        'esg_score': esg_score,
-    }
-    
-    return render(request, 'esg/supplier_detail.html', context)
-
-
-@login_required
-def supplier_dashboard(request):
-    """
-    Supplier dashboard showing their own documents and ESG score.
-    Only accessible to non-staff users linked to a supplier.
-    """
-    # Redirect staff to admin dashboard
-    if request.user.is_staff:
-        return redirect('admin_dashboard')
-    
-    # Get supplier for this user
-    supplier = getattr(request.user, 'supplier', None)
-    
-    if supplier is None:
-        messages.error(request, 'Your account is not linked to a supplier. Please contact admin.')
-        logout(request)
-        return redirect('login')
-    
-    # Get supplier's documents
-    documents = supplier.documents.all().order_by('-uploaded_at')
-    
-    # Get ESG score
-    try:
-        esg_score = supplier.score
-    except ESGScore.DoesNotExist:
-        esg_score = None
-    
-    context = {
-        'supplier': supplier,
-        'documents': documents,
-        'esg_score': esg_score,
-    }
-    
-    return render(request, 'esg/supplier_dashboard.html', context)
-
-
-
-@login_required
-def supplier_documents(request):
-    """
-    View all documents for the supplier.
-    """
-    if request.user.is_staff:
-        return redirect('admin_dashboard')
-    
-    try:
-        supplier = request.user.supplier
-    except Supplier.DoesNotExist:
-        messages.error(request, 'Your account is not linked to a supplier.')
-        return redirect('login')
-    
-    documents = supplier.documents.all().order_by('-uploaded_at')
-    
-    context = {
-        'supplier': supplier,
-        'documents': documents,
-    }
-    
-    return render(request, 'esg/documents.html', context)
-
-
-@login_required
-def upload_document(request):
-    """
-    Upload a new document (supplier users only).
-    """
-    if request.user.is_staff:
-        messages.error(request, 'Admins should use the admin panel to upload documents.')
-        return redirect('admin_dashboard')
-    
-    try:
-        supplier = request.user.supplier
-    except Supplier.DoesNotExist:
-        messages.error(request, 'Your account is not linked to a supplier.')
-        return redirect('login')
     
     if request.method == 'POST':
-        form = DocumentUploadForm(request.POST, request.FILES)
+        form = SupplierCreateForm(request.POST)
         
         if form.is_valid():
-            document = form.save(commit=False)
-            document.supplier = supplier
-            document.save()
-            
-            messages.success(
-                request,
-                'Document uploaded successfully! ESG scoring will be completed automatically.'
-            )
-            return redirect('supplier_dashboard')
+            try:
+                with transaction.atomic():
+                    # Create supplier
+                    supplier = form.save(commit=False)
+                    supplier.esg_score = 0
+                    supplier.risk_level = 'HIGH'
+                    supplier.save()
+                    
+                    # Check if user account should be created
+                    create_user = request.POST.get('create_user_account') == 'on'
+                    credentials = None
+                    
+                    if create_user:
+                        # Generate username from supplier code
+                        username = supplier.supplier_code.lower().replace(' ', '_')
+                        
+                        # Check if username already exists
+                        if User.objects.filter(username=username).exists():
+                            raise ValueError(f"Username '{username}' already exists")
+                        
+                        # Generate random secure password
+                        password = generate_secure_password()
+                        
+                        # Get email or generate default
+                        email = request.POST.get('email', '').strip()
+                        if not email:
+                            email = f"{username}@supplier.local"
+                        
+                        # Create user
+                        user = User.objects.create(
+                            username=username,
+                            email=email,
+                            password=make_password(password),
+                            is_staff=False,
+                            is_active=True
+                        )
+                        
+                        # Link user to supplier
+                        supplier.user = user
+                        supplier.save()
+                        
+                        # Store credentials to display
+                        credentials = {
+                            'username': username,
+                            'password': password,  # Plain text for display only
+                            'email': email
+                        }
+                        
+                        messages.success(
+                            request,
+                            f'Supplier "{supplier.name}" created successfully with user account!'
+                        )
+                    else:
+                        messages.success(
+                            request,
+                            f'Supplier "{supplier.name}" created successfully!'
+                        )
+                    
+                    # Redirect to success page with credentials
+                    return render(request, 'esg/supplier_created_success.html', {
+                        'supplier': supplier,
+                        'credentials': credentials
+                    })
+                    
+            except ValueError as e:
+                messages.error(request, str(e))
+            except Exception as e:
+                messages.error(request, f'Error creating supplier: {str(e)}')
     else:
-        form = DocumentUploadForm()
+        form = SupplierCreateForm()
     
     context = {
         'form': form,
-        'supplier': supplier,
     }
     
-    return render(request, 'esg/upload_document.html', context)
+    return render(request, 'esg/admin_create_supplier.html', context)
 
 
-@login_required
-def document_detail(request, document_id):
+def generate_secure_password(length=12):
     """
-    View detailed information about a document.
+    Generate a secure random password.
+    
+    Args:
+        length: Password length (default: 12)
+    
+    Returns:
+        Secure random password with uppercase, lowercase, digits, and special chars
     """
-    document = get_object_or_404(Document, pk=document_id)
+    # Define character sets
+    lowercase = string.ascii_lowercase
+    uppercase = string.ascii_uppercase
+    digits = string.digits
+    special = '!@#$%^&*'
     
-    if not request.user.is_staff:
-        try:
-            supplier = request.user.supplier
-            if document.supplier != supplier:
-                messages.error(request, 'You can only view your own documents.')
-                return redirect('supplier_dashboard')
-        except Supplier.DoesNotExist:
-            messages.error(request, 'Access denied.')
-            return redirect('login')
+    # Ensure at least one character from each set
+    password = [
+        secrets.choice(lowercase),
+        secrets.choice(uppercase),
+        secrets.choice(digits),
+        secrets.choice(special)
+    ]
     
-    extraction = None
-    keywords = []
-    keyword_summary = {'E': [], 'S': [], 'G': []}
+    # Fill the rest with random characters from all sets
+    all_chars = lowercase + uppercase + digits + special
+    password += [secrets.choice(all_chars) for _ in range(length - 4)]
     
-    if hasattr(document, 'extraction'):
-        extraction = document.extraction
-        keywords = extraction.keywords.all().order_by('esg_category', 'keyword')
-        
-        for keyword in keywords:
-            keyword_summary[keyword.esg_category].append(keyword)
+    # Shuffle to avoid predictable pattern
+    secrets.SystemRandom().shuffle(password)
     
-    context = {
-        'document': document,
-        'extraction': extraction,
-        'keywords': keywords,
-        'keyword_summary': keyword_summary,
-    }
-    
-    return render(request, 'esg/document_detail.html', context)
-
-
-@login_required
-def delete_document(request, document_id):
-    """
-    Delete a document (suppliers can only delete their own).
-    """
-    if request.method != 'POST':
-        return redirect('supplier_dashboard')
-    
-    document = get_object_or_404(Document, pk=document_id)
-    
-    # Check permissions
-    if not request.user.is_staff:
-        try:
-            supplier = request.user.supplier
-            if document.supplier != supplier:
-                messages.error(request, 'You can only delete your own documents.')
-                return redirect('supplier_dashboard')
-        except Supplier.DoesNotExist:
-            messages.error(request, 'Access denied.')
-            return redirect('login')
-    
-    document_name = document.file.name
-    document.delete()
-    
-    messages.success(request, f'Document "{document_name}" deleted successfully.')
-    
-    if request.user.is_staff:
-        return redirect('admin_dashboard')
-    else:
-        return redirect('supplier_dashboard')
-    
-
-@login_required
-def supplier_edit_profile(request):
-    """
-    Allow suppliers to edit their own profile.
-    Staff users are redirected to admin.
-    """
-    if request.user.is_staff:
-        messages.info(request, 'Admins should use the admin panel to edit suppliers.')
-        return redirect('admin_dashboard')
-    
-    try:
-        supplier = request.user.supplier
-    except Supplier.DoesNotExist:
-        messages.error(request, 'Your account is not linked to a supplier.')
-        return redirect('login')
-    
-    if request.method == 'POST':
-        form = SupplierEditForm(request.POST, instance=supplier)
-        
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Your profile has been updated successfully!')
-            return redirect('supplier_dashboard')
-    else:
-        form = SupplierEditForm(instance=supplier)
-    
-    context = {
-        'form': form,
-        'supplier': supplier,
-    }
-    
-    return render(request, 'esg/supplier_edit_profile.html', context)
-
-
-@login_required
-def admin_edit_supplier(request, supplier_id):
-    """
-    Allow admin to edit any supplier.
-    Non-staff users are redirected.
-    """
-    if not request.user.is_staff:
-        messages.error(request, 'Access denied.')
-        return redirect('supplier_dashboard')
-    
-    supplier = get_object_or_404(Supplier, pk=supplier_id)
-    
-    if request.method == 'POST':
-        form = SupplierEditForm(request.POST, instance=supplier)
-        
-        if form.is_valid():
-            form.save()
-            messages.success(request, f'Supplier "{supplier.name}" has been updated successfully!')
-            return redirect('admin_dashboard')
-    else:
-        form = SupplierEditForm(instance=supplier)
-    
-    context = {
-        'form': form,
-        'supplier': supplier,
-        'is_admin_edit': True,  
-    }
-    
-    return render(request, 'esg/admin_edit_supplier.html', context)
+    return ''.join(password)

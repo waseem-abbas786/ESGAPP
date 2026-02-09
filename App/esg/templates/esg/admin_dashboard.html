@@ -68,7 +68,7 @@
     <!-- Actions -->
     <div class="mb-6 flex justify-between items-center">
         <div>
-            <a href="/admin/esg/supplier/add/" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 inline-block shadow">
+            <a href="{% url 'admin_create_supplier' %}"class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 inline-block shadow">
                 <i class="fas fa-plus mr-2"></i> Add New Supplier
             </a>
         </div>
@@ -176,12 +176,11 @@
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <a href="/admin/esg/supplier/{{ supplier.id }}/change/" class="text-blue-600 hover:text-blue-900 mr-3">
-                            <i class="fas fa-edit"></i> Edit
-                        </a>
-                        <a href="{% url 'supplier_detail' supplier.id %}" class="text-green-600 hover:text-green-900">
-                            <i class="fas fa-eye"></i> View
-                        </a>
+                        <a href="{% url 'admin_edit_supplier' supplier.id %}"
+                        class="text-blue-600 hover:text-blue-900 mr-3">
+                       <i class="fas fa-edit"></i> Edit
+                           </a>
+
                     </td>
                 </tr>
                 {% empty %}

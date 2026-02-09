@@ -24,52 +24,83 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- Upload Form -->
             <form method="post" enctype="multipart/form-data" class="space-y-6">
                 {% csrf_token %}
                 
                 <!-- Document Type -->
                 <div>
-                    <label for="{{ form.document_type.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <label for="{{ form.document_type.id_for_label }}"
+                           class="block text-sm font-medium text-gray-700 mb-2">
                         <i class="fas fa-list mr-1"></i> {{ form.document_type.label }}
                     </label>
                     {{ form.document_type }}
                     {% if form.document_type.help_text %}
-                    <p class="mt-1 text-sm text-gray-500">{{ form.document_type.help_text }}</p>
+                        <p class="mt-1 text-sm text-gray-500">
+                            {{ form.document_type.help_text }}
+                        </p>
                     {% endif %}
                     {% if form.document_type.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ form.document_type.errors.0 }}</p>
+                        <p class="mt-1 text-sm text-red-600">
+                            {{ form.document_type.errors.0 }}
+                        </p>
+                    {% endif %}
+                </div>
+
+                <!-- Document Format -->
+                <div>
+                    <label for="{{ form.file_format.id_for_label }}"
+                           class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-file-alt mr-1"></i> {{ form.file_format.label }}
+                    </label>
+                    {{ form.file_format }}
+                    {% if form.file_format.help_text %}
+                        <p class="mt-1 text-sm text-gray-500">
+                            {{ form.file_format.help_text }}
+                        </p>
+                    {% endif %}
+                    {% if form.file_format.errors %}
+                        <p class="mt-1 text-sm text-red-600">
+                            {{ form.file_format.errors.0 }}
+                        </p>
                     {% endif %}
                 </div>
                 
                 <!-- File Upload -->
                 <div>
-                    <label for="{{ form.file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    <label for="{{ form.file.id_for_label }}"
+                           class="block text-sm font-medium text-gray-700 mb-2">
                         <i class="fas fa-file-upload mr-1"></i> {{ form.file.label }}
                     </label>
                     {{ form.file }}
                     {% if form.file.help_text %}
-                    <p class="mt-1 text-sm text-gray-500">{{ form.file.help_text }}</p>
+                        <p class="mt-1 text-sm text-gray-500">
+                            {{ form.file.help_text }}
+                        </p>
                     {% endif %}
                     {% if form.file.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ form.file.errors.0 }}</p>
+                        <p class="mt-1 text-sm text-red-600">
+                            {{ form.file.errors.0 }}
+                        </p>
                     {% endif %}
                 </div>
                 
                 <!-- Form-wide errors -->
                 {% if form.non_field_errors %}
                 <div class="bg-red-50 border border-red-200 rounded p-4">
-                    <p class="text-sm text-red-600">{{ form.non_field_errors.0 }}</p>
+                    <p class="text-sm text-red-600">
+                        {{ form.non_field_errors.0 }}
+                    </p>
                 </div>
                 {% endif %}
                 
                 <!-- Buttons -->
                 <div class="flex justify-between pt-4">
-                    <a href="{% url 'supplier_dashboard' %}" class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    <a href="{% url 'supplier_dashboard' %}"
+                       class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
                         <i class="fas fa-arrow-left mr-2"></i> Cancel
                     </a>
-                    <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow">
+                    <button type="submit"
+                            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow">
                         <i class="fas fa-upload mr-2"></i> Upload Document
                     </button>
                 </div>

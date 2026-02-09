@@ -2,9 +2,9 @@
 
 from django import forms
 from .models import Supplier, Document
+from django.contrib.auth.forms import AuthenticationForm
 
-
-class LoginForm(forms.Form):
+class LoginForm(AuthenticationForm):
     """
     Login form for both admin and supplier users.
     """
@@ -185,4 +185,91 @@ class SupplierEditForm(forms.ModelForm):
         category = self.cleaned_data.get('category', '').strip()
         if not category:
             raise forms.ValidationError('Category cannot be blank.')
+        return category
+    
+
+
+class SupplierCreateForm(forms.ModelForm):
+    """
+    Form for admin to create a new supplier.
+    """
+    
+    class Meta:
+        model = Supplier
+        fields = ['supplier_code', 'name', 'country', 'category']
+        widgets = {
+            'supplier_code': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'e.g., SUP001'
+            }),
+            'name': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Company Name'
+            }),
+            'country': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'Country'
+            }),
+            'category': forms.TextInput(attrs={
+                'class': 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                'placeholder': 'e.g., Manufacturing, Technology'
+            }),
+        }
+        labels = {
+            'supplier_code': 'Supplier Code',
+            'name': 'Company Name',
+            'country': 'Country',
+            'category': 'Business Category',
+        }
+        help_texts = {
+            'supplier_code': 'Unique identifier (will be used for username)',
+            'name': 'Official company name',
+            'country': 'Country of registration',
+            'category': 'Primary business category',
+        }
+    
+    def clean_supplier_code(self):
+        """
+        Validate supplier code is unique and format it properly.
+        """
+        supplier_code = self.cleaned_data.get('supplier_code', '').strip()
+        
+        if not supplier_code:
+            raise forms.ValidationError('Supplier code is required.')
+        
+        # Check if already exists
+        if Supplier.objects.filter(supplier_code=supplier_code).exists():
+            raise forms.ValidationError(
+                f'Supplier code "{supplier_code}" already exists. Please use a different code.'
+            )
+        
+        # Check if username would conflict
+        from django.contrib.auth.models import User
+        username = supplier_code.lower().replace(' ', '_')
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError(
+                f'A user with username "{username}" already exists. Please use a different supplier code.'
+            )
+        
+        return supplier_code
+    
+    def clean_name(self):
+        """Ensure name is not empty."""
+        name = self.cleaned_data.get('name', '').strip()
+        if not name:
+            raise forms.ValidationError('Company name is required.')
+        return name
+    
+    def clean_country(self):
+        """Ensure country is not empty."""
+        country = self.cleaned_data.get('country', '').strip()
+        if not country:
+            raise forms.ValidationError('Country is required.')
+        return country
+    
+    def clean_category(self):
+        """Ensure category is not empty."""
+        category = self.cleaned_data.get('category', '').strip()
+        if not category:
+            raise forms.ValidationError('Category is required.')
         return category

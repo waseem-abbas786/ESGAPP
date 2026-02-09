@@ -224,44 +224,11 @@
         </button>
     </form>
 </td>
-
-                        </tr>
+                   </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-
-            <!-- Document Statistics -->
-            <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-blue-50 p-4 rounded-lg">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600">Total Documents</p>
-                            <p class="text-2xl font-bold text-blue-600">{{ total_documents }}</p>
-                        </div>
-                        <i class="fas fa-file-alt text-blue-600 text-3xl"></i>
-                    </div>
-                </div>
-                <div class="bg-green-50 p-4 rounded-lg">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600">Processed</p>
-                            <p class="text-2xl font-bold text-green-600">{{ processed_documents }}</p>
-                        </div>
-                        <i class="fas fa-check-circle text-green-600 text-3xl"></i>
-                    </div>
-                </div>
-                <div class="bg-yellow-50 p-4 rounded-lg">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-gray-600">Processing</p>
-                            <p class="text-2xl font-bold text-yellow-600">{{ processing_documents }}</p>
-                        </div>
-                        <i class="fas fa-spinner text-yellow-600 text-3xl"></i>
-                    </div>
-                </div>
-            </div>
-
             {% else %}
             <div class="text-center py-12">
                 <i class="fas fa-inbox text-gray-300 text-6xl mb-4"></i>

@@ -4,7 +4,6 @@
 
 {% block content %}
 <div class="container mx-auto px-4">
-    <!-- Breadcrumb -->
     <nav class="mb-6 text-sm">
         <ol class="flex items-center space-x-2 text-gray-600">
             <li><a href="{% if user.is_staff %}{% url 'admin_dashboard' %}{% else %}{% url 'supplier_dashboard' %}{% endif %}" class="hover:text-blue-600">Dashboard</a></li>
