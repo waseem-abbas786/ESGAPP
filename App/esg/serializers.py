@@ -6,8 +6,6 @@ from .models import (
     KeywordResult,
     ESGScore,
     ScoreBreakdown,
-    DashboardCache,
-    AuditLog,
 )
 
 class ScoreBreakdownSerializer(serializers.ModelSerializer):
@@ -233,47 +231,6 @@ class ESGScoreCreateUpdateSerializer(serializers.ModelSerializer):
         return value
 
 
-class DashboardCacheSerializer(serializers.ModelSerializer):
-    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
-    supplier_country = serializers.CharField(source="supplier.country", read_only=True)
-
-    class Meta:
-        model = DashboardCache
-        fields = [
-            "id",
-            "supplier",
-            "supplier_name",
-            "supplier_country",
-            "cached_score",
-            "cached_risk",
-            "last_sync",
-        ]
-        read_only_fields = fields
-
-
-
-class AuditLogSerializer(serializers.ModelSerializer):
-    action_label = serializers.CharField(source="get_action_display", read_only=True)
-    supplier_name = serializers.SerializerMethodField()
-
-    class Meta:
-        model = AuditLog
-        fields = [
-            "id",
-            "supplier",
-            "supplier_name",
-            "action",
-            "action_label",
-            "entity_type",
-            "performed_at",
-        ]
-        read_only_fields = fields
-
-    @staticmethod
-    def get_supplier_name(obj):
-        return obj.supplier.name if obj.supplier else None
-
-
 class SupplierListSerializer(serializers.ModelSerializer):
     cached_score = serializers.SerializerMethodField()
     cached_risk = serializers.SerializerMethodField()
@@ -313,8 +270,7 @@ class SupplierListSerializer(serializers.ModelSerializer):
 class SupplierDetailSerializer(serializers.ModelSerializer):
     documents = DocumentListSerializer(many=True, read_only=True)
     esg_score = ESGScoreDetailSerializer(source="score", read_only=True)
-    audit_logs = AuditLogSerializer(many=True, read_only=True)
-
+    
     class Meta:
         model = Supplier
         fields = [
