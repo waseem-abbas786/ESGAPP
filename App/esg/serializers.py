@@ -126,8 +126,6 @@ class DocumentDetailSerializer(serializers.ModelSerializer):
 
 
 class DocumentCreateSerializer(serializers.ModelSerializer):
-    file = serializers.FileField(write_only=True)
-
     class Meta:
         model = Document
         fields = [
@@ -169,10 +167,8 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        file_obj = validated_data.pop("file")
-        doc = Document.objects.create(**validated_data)
-        doc.file.save(file_obj.name, file_obj, save=True)
-        return doc
+        # Single DB save; file is part of model fields so it will be saved in same create()
+        return Document.objects.create(**validated_data)
 
 
 class ESGScoreListSerializer(serializers.ModelSerializer):
@@ -338,7 +334,7 @@ class SupplierDetailSerializer(serializers.ModelSerializer):
 class SupplierCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Supplier
-        fields = ["id", "name", "country", "category", "created_at"]
+        fields = ["id", "supplier_code", "name", "country", "category", "created_at"]
         read_only_fields = ["id", "created_at"]
 
     def validate_name(self, value):

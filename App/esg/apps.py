@@ -1,5 +1,9 @@
 from django.apps import AppConfig
 
-
 class EsgConfig(AppConfig):
-    name = 'App.esg'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "App.esg"
+
+    def ready(self):
+        import App.esg.signals 
+
